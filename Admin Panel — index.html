@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kasir Mars — Admin Panel v14</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{--bg:#f6f8fc;--surface:#fff;--surface2:#f8fafc;--text:#0f172a;--muted:#64748b;--border:#dbe3ee;--primary:#10b981;--primary2:#059669;--danger:#ef4444;--shadow:0 12px 32px rgba(15,23,42,.08);--radius:20px}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 10% 0%,rgba(16,185,129,.08),transparent 24rem),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .wrap{max-width:1150px;margin:auto;padding:18px}.hidden{display:none!important}
+    .top{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--primary);border-radius:22px;padding:16px 18px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:16px;align-items:center}
+    .brand{display:flex;gap:12px;align-items:center}.logo{width:44px;height:44px;border-radius:14px;background:rgba(16,185,129,.12);display:grid;place-items:center;color:var(--primary);font-weight:900}
+    h1,h2,h3,h4,p{margin:0}.muted{color:var(--muted);font-size:13px}.user{font-size:13px;color:var(--muted)}
+    .grid{display:grid;gap:14px}.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .card{margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+    .tabs{display:flex;gap:8px;overflow:auto;margin-top:16px;padding-bottom:2px}.tab{border:1px solid var(--border);background:var(--surface);color:var(--muted);padding:10px 14px;border-radius:13px;font-weight:800;cursor:pointer;white-space:nowrap}.tab.active{background:rgba(16,185,129,.1);color:var(--primary2);border-color:rgba(16,185,129,.28)}
+    input,select,textarea{width:100%;border:1px solid var(--border);background:var(--surface2);border-radius:13px;padding:10px 12px;color:var(--text);outline:none;font:inherit}input,select{height:44px}textarea{resize:vertical;min-height:110px}input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(16,185,129,.1)}
+    input[type="checkbox"]{width:auto;height:auto;padding:0}.check{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700}
+    label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}.row{display:flex;gap:8px;align-items:end}.row>*{flex:1}
+    button{border:0;border-radius:13px;min-height:44px;padding:0 14px;font-weight:800;cursor:pointer;transition:transform .15s,box-shadow .15s,background .2s}button:hover{transform:translateY(-1px)}button.primary{background:var(--primary);color:#fff}button.primary:hover{background:var(--primary2)}button.secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}button.danger{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+    .list{display:grid;gap:10px;margin-top:14px}.item{border:1px solid var(--border);background:var(--surface2);border-radius:16px;padding:13px;display:flex;justify-content:space-between;gap:12px;align-items:center}.item-main{min-width:0}.item-title{font-weight:850}.item-sub{font-size:12px;color:var(--muted);margin-top:3px}.actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+    .pill{font-size:11px;font-weight:800;padding:5px 8px;border-radius:999px;background:rgba(16,185,129,.1);color:var(--primary2)}
+    .notice{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 14px;border-radius:14px;box-shadow:var(--shadow);font-size:13px;z-index:200;max-width:90vw}.notice.ok{background:#047857}.notice.err{background:#b91c1c}
+    .auth{min-height:100vh;display:grid;place-items:center;padding:18px}.auth-card{width:min(420px,100%);background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:24px;box-shadow:var(--shadow)}.stack{display:grid;gap:12px}
+    .section-title{display:flex;justify-content:space-between;align-items:center;gap:12px}.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:16px;margin-top:14px}
+    .modal{position:fixed;inset:0;background:rgba(15,23,42,.52);display:none;align-items:center;justify-content:center;padding:18px;z-index:150;backdrop-filter:blur(8px)}.modal.show{display:flex}.modal-card{width:min(640px,100%);max-height:min(90vh,760px);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.24)}.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .chart-card{padding:14px}.chart-wrap{position:relative;height:300px}.chart-wrap.tall{height:330px}
+    .stat{padding:16px}.stat .label{font-size:12px;color:var(--muted);font-weight:700}.stat .value{font-size:24px;font-weight:900;margin-top:4px}
+    .setting-preview{border:1px dashed var(--border);border-radius:16px;padding:14px;background:var(--surface2)}.qris-preview{width:min(260px,100%);aspect-ratio:1;object-fit:contain;border-radius:16px;border:1px solid var(--border);background:#fff;display:block;margin:auto}.whatsapp-preview{word-break:break-all;font-size:12px;color:var(--primary2);font-weight:700}
+    .hint{font-size:11px;color:var(--muted);line-height:1.5}
+    .menu-select{width:18px!important;height:18px!important;min-height:0!important;margin:0;accent-color:var(--primary);flex:none;cursor:pointer}
+    .menu-item-selectable{transition:box-shadow .15s,border-color .15s}
+    .menu-item-selectable.selected{border-color:var(--primary)!important;box-shadow:0 0 0 3px var(--primary-soft)!important}
+    .menu-image-preview{width:88px;height:88px;object-fit:cover;border-radius:16px;border:1px solid var(--border);background:var(--surface);display:block}
+    .menu-image-upload{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .import-box{margin-top:14px;border:1px dashed var(--border);background:var(--surface2);border-radius:18px;padding:15px}
+    .import-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+    .import-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .import-sample{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;overflow:hidden;border-radius:14px}
+    .import-sample th,.import-sample td{padding:9px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+    .import-sample th{background:var(--surface);font-weight:800}
+    .import-sample tr:last-child td{border-bottom:0}
+    .import-status{margin-top:10px;min-height:18px}
+    .payment-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+    .payment-filter{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 12px;border:1px solid var(--border);background:var(--surface2);border-radius:13px;font-size:13px;font-weight:700;cursor:pointer}
+    .payment-filter input{width:auto;height:auto;margin:0;accent-color:var(--primary)}
+    @media(max-width:900px){.payment-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:520px){.payment-filter-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:820px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.row{flex-direction:column;align-items:stretch}.row>*{width:100%}.item{align-items:flex-start;flex-direction:column}.actions{justify-content:flex-start;width:100%}.actions button{flex:1}.wrap{padding:10px}.top{border-radius:18px}.chart-wrap{height:260px}}
+  </style>
+</head>
+<body>
+  <div id="authView" class="auth">
+    <div class="auth-card">
+      <div class="brand" style="margin-bottom:18px"><div class="logo">M</div><div><h1 style="font-size:20px">Kasir Mars</h1><p class="muted">Admin Panel</p></div></div>
+      <div class="stack">
+        <div><label>Email Admin</label><input id="loginEmail" type="email" autocomplete="username" placeholder="email@contoh.com"></div>
+        <div><label>Password</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password"></div>
+        <button class="primary" type="button" onclick="signIn()">Masuk ke Admin</button>
+      </div>
+      <p id="loginMsg" class="muted" style="margin-top:12px"></p>
+    </div>
+  </div>
+
+  <div id="appView" class="hidden">
+    <div class="wrap">
+      <header class="top">
+        <div class="brand"><div class="logo">M</div><div><h1 style="font-size:19px">Admin Panel</h1><p class="muted">Kelola outlet, master menu & laporan</p></div></div>
+        <div style="display:flex;gap:10px;align-items:center"><span id="adminEmail" class="user"></span><button class="secondary" type="button" onclick="signOut()">Keluar</button></div>
+      </header>
+
+      <div class="tabs">
+        <button id="tabBtnOutlets" class="tab active" type="button" onclick="showTab('outlets')">Outlet</button>
+        <button id="tabBtnCategories" class="tab" type="button" onclick="showTab('categories')">Kategori</button>
+        <button id="tabBtnMenu" class="tab" type="button" onclick="showTab('menu')">Menu</button>
+        <button id="tabBtnReports" class="tab" type="button" onclick="showTab('reports')">Laporan</button>
+        <button id="tabBtnSettings" class="tab" type="button" onclick="showTab('settings')">Pengaturan Global</button>
+      </div>
+
+      <section id="tab-outlets" class="card">
+        <div class="section-title"><div><h2>Outlet</h2><p class="muted">Data outlet bersifat per outlet.</p></div></div>
+        <div class="card" style="box-shadow:none;margin-top:14px;background:var(--surface2)">
+          <div class="grid grid3">
+            <div><label>Nama Outlet</label><input id="outletName" placeholder="Contoh: Outlet Jakarta"></div>
+            <div><label>Kode Outlet</label><input id="outletCode" placeholder="Contoh: JKT-001"></div>
+            <div><label>Alamat</label><input id="outletAddress" placeholder="Alamat outlet"></div>
+          </div>
+          <button class="primary" style="margin-top:12px" type="button" onclick="addOutlet()">+ Tambah Outlet</button>
+        </div>
+        <div id="outletsList" class="list"></div>
+      </section>
+
+      <section id="tab-categories" class="card hidden">
+        <div class="section-title"><div><h2>Kategori</h2><p class="muted">Kategori menu berlaku untuk semua outlet.</p></div></div>
+        <div class="card" style="box-shadow:none;margin-top:14px;background:var(--surface2)">
+          <div class="grid grid2">
+            <div><label>Nama Kategori</label><input id="catName" placeholder="Contoh: Minuman"></div>
+            <div><label>Warna</label><input id="catColor" type="color" value="#10b981"></div>
+          </div>
+          <button class="primary" style="margin-top:12px" type="button" onclick="addCategory()">+ Tambah Kategori</button>
+        </div>
+        <div id="categoriesList" class="list"></div>
+      </section>
+
+      <section id="tab-menu" class="card hidden">
+        <div class="section-title"><div><h2>Menu</h2><p class="muted">Satu master menu untuk semua outlet.</p></div></div>
+        <div class="card" style="box-shadow:none;margin-top:14px;background:var(--surface2)">
+          <div class="grid grid2">
+            <div><label>Kategori</label><select id="menuCategory"></select></div>
+            <div><label>Nama Menu</label><input id="menuName" placeholder="Contoh: Nasi Goreng"></div>
+          </div>
+          <div class="grid grid2" style="margin-top:12px">
+            <div><label>Harga (Rp)</label><input id="menuPrice" type="text" inputmode="numeric" autocomplete="off" placeholder="25.000" oninput="formatRupiahInput(this)"></div>
+            <div>
+              <label>Foto Menu</label>
+              <div class="menu-image-upload">
+                <img id="menuImagePreview" class="menu-image-preview" alt="Preview foto menu">
+                <div style="flex:1;min-width:180px">
+                  <input id="menuImage" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewMenuImage(event,'menuImagePreview')">
+                  <p class="hint" style="margin-top:6px">Maks file awal 4 MB. Otomatis diperkecil menjadi maksimal 700 px dan target ≤250 KB.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <div style="max-width:220px"><label>&nbsp;</label><label class="check" style="height:44px"><input id="menuIsNew" type="checkbox"> Tandai BARU</label></div>
+            <div><label>&nbsp;</label><button class="primary" type="button" onclick="addMenu()">+ Tambah Menu</button></div>
+          </div>
+        </div>
+
+        <div class="import-box">
+          <div class="import-header">
+            <div>
+              <h3 style="font-size:15px">Import Menu dari Excel</h3>
+              <p class="hint" style="margin-top:5px">Upload daftar menu sekaligus. Semua kategori dan menu dibaca dari sheet pertama. Nama menu angka seperti 1, 2, 3 boleh sama selama kategorinya berbeda.</p>
+            </div>
+            <div class="import-actions">
+              <button class="secondary" type="button" onclick="downloadMenuImportTemplate()">📥 Download Template</button>
+              <label class="primary" style="display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 14px;border-radius:13px;cursor:pointer">
+                📤 Pilih File Excel
+                <input id="menuImportFile" type="file" accept=".xlsx,.xls" style="display:none" onchange="handleMenuImportFile(event)">
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-preview" style="margin-top:12px">
+            <div style="font-weight:800;font-size:12px">Format yang dipakai</div>
+            <div class="hint" style="margin-top:5px">Sheet pertama harus memakai 3 kolom: <b>KATEGORI</b>, <b>NAMA MENU</b>, <b>HARGA</b>. Kolom KATEGORI boleh kosong pada baris berikutnya untuk meneruskan kategori sebelumnya.</div>
+            <div style="overflow:auto;margin-top:10px">
+              <table class="import-sample">
+                <thead><tr><th>KATEGORI</th><th>NAMA MENU</th><th>HARGA</th></tr></thead>
+                <tbody>
+                  <tr><td>MARTABAK</td><td>BIASA</td><td>15000</td></tr>
+                  <tr><td></td><td>ISTIMEWA</td><td>25000</td></tr>
+                  <tr><td></td><td>JUMBO</td><td>47000</td></tr>
+                  <tr><td></td><td>SIGNATURE</td><td>45000</td></tr>
+                  <tr><td>TERANG BULAN</td><td>COKLAT</td><td>18000</td></tr>
+                  <tr><td></td><td>KEJU</td><td>18000</td></tr>
+                  <tr><td></td><td>KACANG</td><td>18000</td></tr>
+                  <tr><td colspan="3" style="text-align:center;color:var(--muted)">… pola yang sama untuk kategori berikutnya</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p id="menuImportStatus" class="hint import-status"></p>
+        </div>
+
+        <div class="bulk-menu-toolbar" style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--border);background:var(--surface2);border-radius:16px">
+          <label class="check" style="margin:0;cursor:pointer"><input id="menuSelectAll" type="checkbox" onchange="toggleSelectAllMenus(this.checked)"> Pilih semua</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="menuSelectedCount" class="hint">0 dipilih</span>
+            <button id="bulkDeleteMenuBtn" class="danger" type="button" onclick="deleteSelectedMenus()" disabled>Hapus yang dipilih</button>
+          </div>
+        </div>
+        <div id="menuList" class="list"></div>
+      </section>
+
+      <section id="tab-reports" class="card hidden">
+        <div class="section-title"><div><h2>Laporan</h2><p class="muted">Laporan operasional dari data transaksi Supabase.</p></div><button class="secondary" type="button" onclick="exportReportXlsx()">Export Excel</button></div>
+        <div class="card" style="box-shadow:none;margin-top:14px;background:var(--surface2)">
+          <div class="grid grid3">
+            <div><label>Outlet</label><select id="reportOutlet"><option value="">Semua outlet</option></select></div>
+            <div><label>Tanggal mulai</label><input id="reportStart" type="date"></div>
+            <div><label>Tanggal akhir</label><input id="reportEnd" type="date"></div>
+          </div>
+          <div class="card" style="margin-top:12px;box-shadow:none;background:var(--surface);padding:14px">
+            <div class="section-title">
+              <div>
+                <h3 style="font-size:14px">Tampilkan Transaksi</h3>
+                <p class="muted">Pilih jenis pembayaran yang ingin ditampilkan pada laporan.</p>
+              </div>
+              <button class="secondary" type="button" onclick="setAllPaymentFilters(true)">Semua</button>
+            </div>
+            <div class="payment-filter-grid" style="margin-top:10px">
+              <label class="payment-filter"><input class="report-payment-filter" type="checkbox" value="Cash" checked onchange="loadReports()"><span>Cash</span></label>
+              <label class="payment-filter"><input class="report-payment-filter" type="checkbox" value="QRIS" checked onchange="loadReports()"><span>QRIS</span></label>
+              <label class="payment-filter"><input class="report-payment-filter" type="checkbox" value="Grab" checked onchange="loadReports()"><span>Grab</span></label>
+              <label class="payment-filter"><input class="report-payment-filter" type="checkbox" value="Shopee" checked onchange="loadReports()"><span>Shopee</span></label>
+              <label class="payment-filter"><input class="report-payment-filter" type="checkbox" value="Gofood" checked onchange="loadReports()"><span>Gofood</span></label>
+            </div>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <button class="primary" type="button" onclick="loadReports()">Tampilkan Laporan</button>
+            <button class="secondary" type="button" onclick="resetReports()">Reset</button>
+          </div>
+        </div>
+
+        <div class="grid grid4" style="margin-top:14px">
+          <div class="card stat" style="margin-top:0"><div class="label">Jumlah Transaksi</div><div class="value" id="reportCount">0</div></div>
+          <div class="card stat" style="margin-top:0"><div class="label">Total Omzet</div><div class="value" id="reportRevenue">Rp 0</div></div>
+          <div class="card stat" style="margin-top:0"><div class="label">Rata-rata Transaksi</div><div class="value" id="reportAverage">Rp 0</div></div>
+          <div class="card stat" style="margin-top:0"><div class="label">Outlet Terbaca</div><div class="value" id="reportOutletCount">0</div></div>
+        </div>
+
+        <div class="grid grid2" style="margin-top:14px">
+          <div class="card chart-card" style="margin-top:0"><div class="section-title"><h3>Grafik Total</h3><span class="pill">Bar</span></div><div class="chart-wrap"><canvas id="totalBarChart"></canvas></div></div>
+          <div class="card chart-card" style="margin-top:0"><div class="section-title"><h3>Penjualan Tiap Outlet</h3><span class="pill">Line</span></div><div class="chart-wrap"><canvas id="outletLineChart"></canvas></div></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;box-shadow:none;background:var(--surface2)">
+          <div class="section-title"><div><h3>Uang Masuk per Pembayaran</h3><p class="muted">Rincian omzet berdasarkan channel pembayaran.</p></div></div>
+          <div id="reportPaymentSummary" class="grid grid4" style="margin-top:12px"></div>
+        </div>
+
+        <div id="reportOutletSummary" class="list"></div>
+        <div id="reportTransactions"></div>
+      </section>
+
+      <section id="tab-settings" class="card hidden">
+        <div class="section-title"><div><h2>Pengaturan Global</h2><p class="muted">Satu QRIS + satu nomor WhatsApp untuk semua outlet.</p></div></div>
+        <div class="grid grid2" style="margin-top:14px">
+          <div class="card" style="margin-top:0;box-shadow:none;background:var(--surface2)">
+            <h3 style="font-size:15px;margin-bottom:12px">Foto QRIS Global</h3>
+            <div class="setting-preview"><img id="qrisPreview" class="qris-preview" alt="Preview QRIS" src=""></div>
+            <input id="qrisFile" type="file" accept="image/*" style="margin-top:12px">
+            <p class="hint" style="margin-top:8px">Upload/ganti satu foto QRIS. Foto ini nantinya dibaca oleh semua outlet pada aplikasi Kasir.</p>
+          </div>
+          <div class="card" style="margin-top:0;box-shadow:none;background:var(--surface2)">
+            <h3 style="font-size:15px;margin-bottom:12px">Grup WhatsApp Laporan</h3>
+            <label>Link Grup WhatsApp</label>
+            <input id="globalWhatsappGroup" type="url" placeholder="https://chat.whatsapp.com/....">
+            <p class="hint" style="margin-top:8px">Masukkan link undangan grup WhatsApp yang dipakai bersama untuk semua outlet.</p>
+            <div class="setting-preview" style="margin-top:14px">
+              <div class="muted" style="font-size:11px">Grup yang akan dibuka tombol KIRIM LAPORAN:</div>
+              <div id="whatsappPreview" class="whatsapp-preview" style="margin-top:6px">-</div>
+            </div>
+          </div>
+        </div>
+        <button class="primary" style="margin-top:14px" type="button" onclick="saveGlobalSettings()">Simpan Pengaturan Global</button>
+        <p id="settingsStatus" class="hint" style="margin-top:10px"></p>
+      </section>
+    </div>
+  </div>
+
+  <!-- OUTLET EDIT MODAL -->
+  <div id="outletEditModal" class="modal">
+    <div class="modal-card">
+      <div class="section-title"><div><h2>Edit Outlet</h2><p class="muted">Ubah data outlet.</p></div><button class="secondary" type="button" onclick="closeOutletEdit()">✕</button></div>
+      <input id="editOutletId" type="hidden">
+      <div class="grid grid2" style="margin-top:16px">
+        <div><label>Nama Outlet</label><input id="editOutletName"></div>
+        <div><label>Kode Outlet</label><input id="editOutletCode"></div>
+      </div>
+      <div style="margin-top:12px"><label>Alamat</label><input id="editOutletAddress"></div>
+      <div class="modal-actions"><button class="secondary" type="button" onclick="closeOutletEdit()">Batal</button><button class="primary" type="button" onclick="updateOutlet()">Simpan Perubahan</button></div>
+    </div>
+  </div>
+
+  <!-- MENU EDIT MODAL -->
+  <div id="menuEditModal" class="modal">
+    <div class="modal-card">
+      <div class="section-title"><div><h2>Edit Menu</h2><p class="muted">Ubah data menu global.</p></div><button class="secondary" type="button" onclick="closeMenuEdit()">✕</button></div>
+      <input id="editMenuId" type="hidden">
+      <div class="grid grid2" style="margin-top:16px">
+        <div><label>Kategori</label><select id="editMenuCategory"></select></div>
+        <div><label>Nama Menu</label><input id="editMenuName"></div>
+      </div>
+      <div class="grid grid2" style="margin-top:12px">
+        <div><label>Harga (Rp)</label><input id="editMenuPrice" type="text" inputmode="numeric" autocomplete="off" oninput="formatRupiahInput(this)"></div>
+        <div><label>&nbsp;</label><label class="check" style="height:44px"><input id="editMenuIsNew" type="checkbox"> Tandai BARU</label></div>
+      </div>
+      <div style="margin-top:12px">
+        <label>Foto Menu</label>
+        <div class="menu-image-upload">
+          <img id="editMenuImagePreview" class="menu-image-preview" alt="Preview foto menu">
+          <div style="flex:1;min-width:180px">
+            <input id="editMenuImage" type="file" accept="image/jpeg,image/png,image/webp" onchange="previewMenuImage(event,'editMenuImagePreview')">
+            <p class="hint" style="margin-top:6px">Pilih foto baru untuk mengganti foto menu. Maks file awal 4 MB, hasil otomatis dioptimalkan.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions"><button class="secondary" type="button" onclick="closeMenuEdit()">Batal</button><button class="primary" type="button" onclick="updateMenu()">Simpan Perubahan</button></div>
+    </div>
+  </div>
+
+  <div id="notice" class="notice hidden"></div>
+
+<script>
+  const SUPABASE_URL = 'https://xxdskhnnfscxykxjrsog.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_7J3iIcJCGw8fhhuRI7RAVA_CaeODf5j';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  let outlets = [], categories = [], menuItems = [], reportRows = [];
+  let totalBarChart = null, outletLineChart = null;
+  const globalSettings = { whatsapp_group_link:'', qris_url:'' };
+
+  function notify(msg,type='ok'){
+    const el=document.getElementById('notice'); el.textContent=msg; el.className='notice '+type;
+    clearTimeout(window.__noticeTimer); window.__noticeTimer=setTimeout(()=>el.classList.add('hidden'),2800);
+  }
+  function setLoginMsg(msg,err=false){const el=document.getElementById('loginMsg');el.textContent=msg;el.style.color=err?'#b91c1c':'var(--muted)'}
+  function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+  function money(v){return 'Rp '+Number(v||0).toLocaleString('id-ID')}
+
+  async function signIn(){
+    const email=document.getElementById('loginEmail').value.trim(); const password=document.getElementById('loginPassword').value;
+    if(!email||!password){setLoginMsg('Isi email dan password.',true);return}
+    setLoginMsg('Memproses login...');
+    const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error){setLoginMsg(error.message,true);return}
+    await enterApp();
+  }
+  async function enterApp(){
+    const {data:{user}}=await sb.auth.getUser(); if(!user){showAuth();return}
+    const {data:profile,error}=await sb.from('profiles').select('full_name,role,outlet_id').eq('id',user.id).single();
+    if(error||!profile){await sb.auth.signOut();setLoginMsg('Profil Admin belum ditemukan.',true);return}
+    if(profile.role!=='admin'){await sb.auth.signOut();setLoginMsg('Akun ini bukan Admin.',true);return}
+    document.getElementById('authView').classList.add('hidden'); document.getElementById('appView').classList.remove('hidden');
+    document.getElementById('adminEmail').textContent=profile.full_name||user.email;
+    await loadAll();
+  }
+  function showAuth(){document.getElementById('appView').classList.add('hidden');document.getElementById('authView').classList.remove('hidden')}
+  async function signOut(){await sb.auth.signOut();showAuth()}
+
+  function showTab(tab){
+    ['outlets','categories','menu','reports','settings'].forEach(x=>{
+      const p=document.getElementById('tab-'+x); const b=document.getElementById('tabBtn'+x.charAt(0).toUpperCase()+x.slice(1));
+      if(p)p.classList.toggle('hidden',x!==tab); if(b)b.classList.toggle('active',x===tab);
+    });
+    if(tab==='categories')renderCategories();
+    if(tab==='menu'){renderMenu();loadCategoriesForMenu();}
+    if(tab==='reports'){populateReportOutlet();loadReports();}
+    if(tab==='settings')loadGlobalSettings();
+  }
+  async function loadAll(){
+    await Promise.all([loadOutlets(),loadCategories(),loadMenuItems(),loadGlobalSettings()]);
+    populateReportOutlet(); renderOutlets(); renderCategories(); renderMenu(); loadCategoriesForMenu();
+  }
+  async function loadOutlets(){const {data,error}=await sb.from('outlets').select('*').order('created_at',{ascending:true});if(error){notify(error.message,'err');return}outlets=data||[]}
+  async function loadCategories(){const {data,error}=await sb.from('categories').select('*').order('created_at',{ascending:true});if(error){notify(error.message,'err');return}categories=data||[]}
+  async function loadMenuItems(){const {data,error}=await sb.from('menu_items').select('*, categories(name)').order('created_at',{ascending:true});if(error){notify(error.message,'err');return}menuItems=data||[]}
+
+  function loadCategoriesForMenu(){
+    const options='<option value="">Pilih kategori...</option>'+categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    document.getElementById('menuCategory').innerHTML=options; document.getElementById('editMenuCategory').innerHTML=options;
+  }
+  function populateReportOutlet(){
+    const el=document.getElementById('reportOutlet'); if(!el)return; const current=el.value;
+    el.innerHTML='<option value="">Semua outlet</option>'+outlets.map(o=>`<option value="${o.id}">${esc(o.name)} (${esc(o.code)})</option>`).join('');
+    if(outlets.some(o=>o.id===current))el.value=current;
+  }
+
+  async function addOutlet(){
+    const name=document.getElementById('outletName').value.trim(),code=document.getElementById('outletCode').value.trim(),address=document.getElementById('outletAddress').value.trim();
+    if(!name||!code){notify('Nama dan kode outlet wajib diisi.','err');return}
+    const {error}=await sb.from('outlets').insert({name,code,address:address||null}); if(error){notify(error.message,'err');return}
+    ['outletName','outletCode','outletAddress'].forEach(id=>document.getElementById(id).value=''); await loadOutlets();populateReportOutlet();renderOutlets();notify('Outlet berhasil ditambahkan.');
+  }
+  async function toggleOutlet(id,active){
+    const {error}=await sb.from('outlets').update({is_active:!active}).eq('id',id); if(error){notify(error.message,'err');return}
+    await loadOutlets();populateReportOutlet();renderOutlets();notify('Status outlet diperbarui.');
+  }
+  function openOutletEdit(id){
+    const o=outlets.find(x=>x.id===id); if(!o)return;
+    document.getElementById('editOutletId').value=o.id; document.getElementById('editOutletName').value=o.name||''; document.getElementById('editOutletCode').value=o.code||''; document.getElementById('editOutletAddress').value=o.address||'';
+    document.getElementById('outletEditModal').classList.add('show'); setTimeout(()=>document.getElementById('editOutletName')?.focus(),30);
+  }
+  function closeOutletEdit(){document.getElementById('outletEditModal').classList.remove('show')}
+  async function updateOutlet(){
+    const id=document.getElementById('editOutletId').value,name=document.getElementById('editOutletName').value.trim(),code=document.getElementById('editOutletCode').value.trim(),address=document.getElementById('editOutletAddress').value.trim();
+    if(!id||!name||!code){notify('Nama dan kode outlet wajib diisi.','err');return}
+    const {error}=await sb.from('outlets').update({name,code,address:address||null}).eq('id',id); if(error){notify(error.message,'err');return}
+    closeOutletEdit();await loadOutlets();populateReportOutlet();renderOutlets();notify('Data outlet berhasil diperbarui.');
+  }
+  function renderOutlets(){
+    const el=document.getElementById('outletsList');
+    el.innerHTML=outlets.length?outlets.map(o=>`<div class="item"><div class="item-main"><div class="item-title">${esc(o.name)} <span class="pill">${esc(o.code)}</span></div><div class="item-sub">${esc(o.address||'Alamat belum diisi')}</div></div><div class="actions"><span class="pill" style="${o.is_active?'':'background:#f1f5f9;color:#64748b'}">${o.is_active?'Aktif':'Nonaktif'}</span><button class="secondary" type="button" onclick="openOutletEdit('${o.id}')">Edit</button><button class="secondary" type="button" onclick="toggleOutlet('${o.id}',${o.is_active})">${o.is_active?'Nonaktifkan':'Aktifkan'}</button></div></div>`).join(''):'<div class="empty">Belum ada outlet.</div>';
+  }
+
+  async function addCategory(){
+    const name=document.getElementById('catName').value.trim(),color=document.getElementById('catColor').value; if(!name){notify('Isi nama kategori.','err');return}
+    const {error}=await sb.from('categories').insert({outlet_id:null,name,color}); if(error){notify(error.message,'err');return}
+    document.getElementById('catName').value='';await loadCategories();renderCategories();loadCategoriesForMenu();notify('Kategori berhasil ditambahkan.');
+  }
+  async function deleteCategory(id){
+    const category=categories.find(c=>c.id===id); if(!category){notify('Kategori tidak ditemukan.','err');return}
+    if(!confirm(`Hapus kategori "${category.name}"?`))return;
+    try{
+      const {data:usedMenus,error:checkError}=await sb.from('menu_items').select('id,name').eq('category_id',id);
+      if(checkError)throw new Error('Gagal mengecek menu kategori: '+checkError.message);
+      if((usedMenus||[]).length){notify(`Kategori masih dipakai oleh ${(usedMenus||[]).length} menu. Ubah kategori menu tersebut terlebih dahulu.`,'err');return}
+      const {error}=await sb.from('categories').delete().eq('id',id); // tanpa .select(): lebih aman terhadap RLS
+      if(error)throw new Error('Gagal menghapus kategori: '+error.message);
+      await loadCategories();await loadMenuItems();renderCategories();renderMenu();loadCategoriesForMenu();notify('Kategori berhasil dihapus.');
+    }catch(err){notify(err.message||'Gagal menghapus kategori.','err')}
+  }
+  function renderCategories(){
+    const el=document.getElementById('categoriesList');
+    el.innerHTML=categories.length?categories.map(c=>`<div class="item"><div class="item-main"><div class="item-title"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${c.color||'#10b981'};margin-right:7px"></span>${esc(c.name)}</div><div class="item-sub">Master untuk semua outlet</div></div><div class="actions"><button class="danger" type="button" onclick="deleteCategory('${c.id}')">Hapus</button></div></div>`).join(''):'<div class="empty">Belum ada kategori.</div>';
+  }
+
+  function parseRupiahInput(value){
+    const digits=String(value??'').replace(/\D/g,'');
+    return digits?Number(digits):0;
+  }
+  function formatRupiahInput(el){
+    if(!el)return;
+    const n=parseRupiahInput(el.value);
+    el.value=n?new Intl.NumberFormat('id-ID').format(n):'';
+  }
+  function setImagePreview(src,id){
+    const el=document.getElementById(id); if(!el)return;
+    el.src=src||'';
+    el.style.opacity=src?'1':'.35';
+  }
+  function previewMenuImage(event,previewId){
+    const file=event?.target?.files?.[0];
+    if(!file){setImagePreview('',previewId);return}
+    if(!file.type.startsWith('image/')){event.target.value='';notify('File foto menu harus berupa gambar.','err');return}
+    if(file.size>4*1024*1024){event.target.value='';notify('Foto menu maksimal 4 MB sebelum dikompres.','err');return}
+    const reader=new FileReader();
+    reader.onload=()=>setImagePreview(reader.result,previewId);
+    reader.readAsDataURL(file);
+  }
+  function compressMenuImage(file){
+    return new Promise((resolve,reject)=>{
+      if(!file?.type?.startsWith('image/')){reject(new Error('File foto menu harus berupa gambar.'));return}
+      if(file.size>4*1024*1024){reject(new Error('Foto menu maksimal 4 MB sebelum dikompres.'));return}
+      const reader=new FileReader();
+      reader.onerror=()=>reject(new Error('Gagal membaca foto menu.'));
+      reader.onload=()=>{
+        const img=new Image();
+        img.onerror=()=>reject(new Error('Foto menu tidak dapat dibaca.'));
+        img.onload=()=>{
+          const max=700;
+          const scale=Math.min(1,max/Math.max(img.width,img.height));
+          const canvas=document.createElement('canvas');
+          canvas.width=Math.max(1,Math.round(img.width*scale));
+          canvas.height=Math.max(1,Math.round(img.height*scale));
+          const ctx=canvas.getContext('2d');
+          ctx.drawImage(img,0,0,canvas.width,canvas.height);
+          const qualities=[0.82,0.72,0.62,0.52,0.42];
+          let idx=0;
+          const tryBlob=()=>canvas.toBlob(blob=>{
+            if(!blob){reject(new Error('Gagal mengoptimalkan foto menu.'));return}
+            if(blob.size<=250*1024 || idx===qualities.length-1){
+              if(blob.size>250*1024){reject(new Error('Foto masih terlalu besar setelah kompresi. Gunakan foto yang lebih sederhana.'));return}
+              resolve(blob);return;
+            }
+            idx++;tryBlob();
+          },'image/webp',qualities[idx]);
+          tryBlob();
+        };
+        img.src=reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+  function publicMenuImageUrl(path){
+    const {data}=sb.storage.from('app-assets').getPublicUrl(path);
+    return (data?.publicUrl||'')+'?v='+Date.now();
+  }
+  async function uploadMenuImage(menuId,file){
+    const blob=await compressMenuImage(file);
+    const path=`menu/${menuId}.webp`;
+    const {error}=await sb.storage.from('app-assets').upload(path,blob,{contentType:'image/webp',upsert:true,cacheControl:'31536000'});
+    if(error)throw new Error('Upload foto menu gagal: '+error.message);
+    return publicMenuImageUrl(path);
+  }
+  async function addMenu(){
+    const category_id=document.getElementById('menuCategory').value,
+          name=document.getElementById('menuName').value.trim(),
+          price=parseRupiahInput(document.getElementById('menuPrice').value),
+          is_new=document.getElementById('menuIsNew').checked,
+          file=document.getElementById('menuImage').files?.[0]||null;
+    if(!category_id||!name){notify('Pilih kategori dan isi nama menu.','err');return}
+    if(price<0){notify('Harga tidak boleh negatif.','err');return}
+    const id=crypto.randomUUID();
+    const {error:insertError}=await sb.from('menu_items').insert({id,outlet_id:null,category_id,name,price,is_new});
+    if(insertError){notify('Gagal menambah menu: '+insertError.message,'err');return}
+    try{
+      if(file){
+        const imageUrl=await uploadMenuImage(id,file);
+        const {error:imageError}=await sb.from('menu_items').update({image_url:imageUrl}).eq('id',id);
+        if(imageError)throw new Error('Gagal menyimpan foto menu: '+imageError.message);
+      }
+    }catch(err){
+      await sb.from('menu_items').delete().eq('id',id);
+      notify(err.message||'Gagal menyimpan foto menu.','err');return;
+    }
+    document.getElementById('menuName').value='';document.getElementById('menuPrice').value='';document.getElementById('menuIsNew').checked=false;document.getElementById('menuImage').value='';setImagePreview('', 'menuImagePreview');
+    await loadMenuItems();renderMenu();notify('Menu berhasil ditambahkan.');
+  }
+  async function toggleMenu(id,active){const {error}=await sb.from('menu_items').update({is_active:!active}).eq('id',id);if(error){notify(error.message,'err');return}await loadMenuItems();renderMenu();notify('Status menu diperbarui.')}
+  function openMenuEdit(id){
+    const m=menuItems.find(x=>x.id===id);if(!m)return;
+    document.getElementById('editMenuId').value=m.id;document.getElementById('editMenuName').value=m.name||'';
+    document.getElementById('editMenuPrice').value=m.price?new Intl.NumberFormat('id-ID').format(Number(m.price)):'';
+    document.getElementById('editMenuIsNew').checked=!!m.is_new;document.getElementById('editMenuImage').value='';
+    loadCategoriesForMenu();document.getElementById('editMenuCategory').value=m.category_id||'';
+    setImagePreview(m.image_url||'', 'editMenuImagePreview');
+    document.getElementById('menuEditModal').classList.add('show');setTimeout(()=>document.getElementById('editMenuName')?.focus(),30);
+  }
+  function closeMenuEdit(){document.getElementById('menuEditModal').classList.remove('show')}
+  async function updateMenu(){
+    const id=document.getElementById('editMenuId').value,
+          category_id=document.getElementById('editMenuCategory').value,
+          name=document.getElementById('editMenuName').value.trim(),
+          price=parseRupiahInput(document.getElementById('editMenuPrice').value),
+          is_new=document.getElementById('editMenuIsNew').checked,
+          file=document.getElementById('editMenuImage').files?.[0]||null;
+    if(!id||!category_id||!name){notify('Kategori dan nama menu wajib diisi.','err');return}if(price<0){notify('Harga tidak boleh negatif.','err');return}
+    let image_url;
+    try{
+      if(file) image_url=await uploadMenuImage(id,file);
+    }catch(err){notify(err.message||'Gagal memproses foto menu.','err');return}
+    const payload={category_id,name,price,is_new};if(image_url)payload.image_url=image_url;
+    const {error}=await sb.from('menu_items').update(payload).eq('id',id);if(error){notify('Gagal mengubah menu: '+error.message,'err');return}
+    closeMenuEdit();await loadMenuItems();renderMenu();notify('Menu berhasil diperbarui.');
+  }
+  async function deleteMenu(id){
+    const m=menuItems.find(x=>x.id===id);if(!m)return;if(!confirm(`Hapus menu "${m.name}"?`))return;
+    const {error}=await sb.from('menu_items').delete().eq('id',id);if(error){notify('Gagal menghapus menu: '+error.message,'err');return}
+    try{await sb.storage.from('app-assets').remove([`menu/${id}.webp`]);}catch(e){}
+    await loadMenuItems();renderMenu();updateMenuSelectionUI();notify('Menu dihapus.');
+  }
+
+  function getSelectedMenuIds(){
+    return [...document.querySelectorAll('.menu-select:checked')].map(el=>String(el.value));
+  }
+  function updateMenuSelectionUI(){
+    const ids=getSelectedMenuIds();
+    const countEl=document.getElementById('menuSelectedCount');
+    const btn=document.getElementById('bulkDeleteMenuBtn');
+    const all=document.getElementById('menuSelectAll');
+    if(countEl) countEl.textContent=`${ids.length} dipilih`;
+    if(btn) btn.disabled=ids.length===0;
+    if(all){
+      all.checked=menuItems.length>0 && ids.length===menuItems.length;
+      all.indeterminate=ids.length>0 && ids.length<menuItems.length;
+    }
+    document.querySelectorAll('.menu-item-selectable').forEach(el=>{
+      const cb=el.querySelector('.menu-select');
+      el.classList.toggle('selected',!!cb?.checked);
+    });
+  }
+  function toggleMenuSelection(id,checked){
+    const cb=document.querySelector(`.menu-select[value="${CSS.escape(String(id))}"]`);
+    if(cb) cb.checked=checked;
+    updateMenuSelectionUI();
+  }
+  function toggleSelectAllMenus(checked){
+    document.querySelectorAll('.menu-select').forEach(cb=>cb.checked=checked);
+    updateMenuSelectionUI();
+  }
+  async function deleteSelectedMenus(){
+    const ids=getSelectedMenuIds();
+    if(!ids.length){notify('Pilih minimal satu menu terlebih dahulu.','err');return}
+    const selected=menuItems.filter(m=>ids.includes(String(m.id)));
+    if(!confirm(`Hapus ${selected.length} menu yang dipilih?\n\nMenu yang dihapus tidak akan lagi tampil di semua outlet.`))return;
+    const btn=document.getElementById('bulkDeleteMenuBtn');
+    if(btn) btn.disabled=true;
+    try{
+      const {error}=await sb.from('menu_items').delete().in('id',ids);
+      if(error) throw new Error('Gagal menghapus menu: '+error.message);
+      try{await sb.storage.from('app-assets').remove(ids.map(id=>`menu/${id}.webp`));}catch(e){}
+      await loadMenuItems();
+      renderMenu();
+      updateMenuSelectionUI();
+      notify(`${selected.length} menu berhasil dihapus.`);
+    }catch(err){
+      notify(err.message||'Gagal menghapus menu.','err');
+      updateMenuSelectionUI();
+    }
+  }
+  function renderMenu(){
+    const el=document.getElementById('menuList');
+    el.innerHTML=menuItems.length?menuItems.map(m=>`<div class="item menu-item-selectable"><div class="item-main" style="display:flex;gap:12px;align-items:center"><input class="menu-select" type="checkbox" value="${esc(m.id)}" aria-label="Pilih ${esc(m.name)}" onchange="updateMenuSelectionUI()">${m.image_url?`<img src="${esc(m.image_url)}" alt="${esc(m.name)}" class="menu-image-preview" style="width:58px;height:58px;flex:none">`:''}<div><div class="item-title">${esc(m.name)} ${m.is_new?'<span class="pill">BARU</span>':''}</div><div class="item-sub">${esc(m.categories?.name||'Tanpa kategori')} · Rp ${Number(m.price||0).toLocaleString('id-ID')} · Master semua outlet</div></div></div><div class="actions"><span class="pill" style="${m.is_active?'':'background:#f1f5f9;color:#64748b'}">${m.is_active?'Aktif':'Nonaktif'}</span><button class="secondary" type="button" onclick="openMenuEdit('${m.id}')">Edit</button><button class="secondary" type="button" onclick="toggleMenu('${m.id}',${m.is_active})">${m.is_active?'Nonaktifkan':'Aktifkan'}</button><button class="danger" type="button" onclick="deleteMenu('${m.id}')">Hapus</button></div></div>`).join(''):'<div class="empty">Belum ada menu.</div>';
+    updateMenuSelectionUI();
+  }
+
+  function normalizeImportHeader(v){
+    return String(v??'').trim().toUpperCase().replace(/\s+/g,' ');
+  }
+  function parseImportPrice(v){
+    if(typeof v==='number' && Number.isFinite(v)) return Math.round(v);
+    const digits=String(v??'').replace(/\D/g,'');
+    return digits?Number(digits):0;
+  }
+  function setImportStatus(msg,err=false){
+    const el=document.getElementById('menuImportStatus');
+    if(!el)return;
+    el.textContent=msg||'';
+    el.style.color=err?'#b91c1c':'var(--muted)';
+  }
+  function downloadMenuImportTemplate(){
+    if(typeof XLSX==='undefined'){notify('Modul Excel belum termuat. Coba refresh.','err');return}
+    const rows=[
+      ['KATEGORI','NAMA MENU','HARGA'],
+      ['MARTABAK','BIASA',15000],
+      ['', 'ISTIMEWA',25000],
+      ['', 'JUMBO',47000],
+      ['', 'SIGNATURE',45000],
+      ['TERANG BULAN','COKLAT',18000],
+      ['', 'KEJU',18000],
+      ['', 'KACANG',18000],
+      ['', 'COKLAT KEJU',27000],
+      ['', 'COKLAT KACANG',25000],
+      ['', 'COKLAT KEJU KACANG',35000],
+      ['', 'CHOCOCRUNCY',25000],
+      ['MARTABAK HEMAT','BIASA',11000],
+      ['', 'ISTIMEWA',21000],
+      ['', 'JUMBO',42000],
+      ['', 'SIGNATURE',40000],
+      ['TERANG BULAN HEMAT','COKLAT',13000],
+      ['', 'KEJU',13000],
+      ['', 'KACANG',13000],
+      ['', 'COKLAT KEJU',23000],
+      ['', 'COKLAT KACANG',20000],
+      ['', 'COKLAT KEJU KACANG',30000],
+      ['', 'CHOCOCRUNCY',18000],
+      ['PAKET BUNDLING',1,45000],
+      ['', 2,45000],
+      ['', 3,48000],
+      ['', 4,54000],
+      ['', 5,55000],
+      ['', 6,57000],
+      ['', 7,62000],
+      ['', 8,64000],
+      ['', 9,77000],
+      ['', 10,77000],
+      ['PAKET PUAS HEMAT',1,32000],
+      ['', 2,32000],
+      ['', 3,34000],
+      ['', 4,37000]
+    ];
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:24},{wch:32},{wch:14}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+    XLSX.writeFile(wb,'template-import-menu.xlsx');
+    setImportStatus('Template Excel berhasil dibuat.');
+  }
+  function normalizeImportText(v){
+    return String(v??'').replace(/\u00a0/g,' ').trim().replace(/\s+/g,' ').toLowerCase();
+  }
+  async function handleMenuImportFile(event){
+    const file=event?.target?.files?.[0];
+    if(!file)return;
+    if(typeof XLSX==='undefined'){setImportStatus('Modul Excel belum termuat. Refresh halaman lalu coba lagi.',true);return}
+    setImportStatus('Membaca file Excel...');
+    try{
+      const buffer=await file.arrayBuffer();
+      const book=XLSX.read(buffer,{type:'array'});
+      const firstSheet=book.Sheets[book.SheetNames[0]];
+      if(!firstSheet)throw new Error('Sheet pertama tidak ditemukan.');
+      const rows=XLSX.utils.sheet_to_json(firstSheet,{header:1,defval:''});
+      if(!rows.length)throw new Error('File Excel kosong.');
+
+      const headers=rows[0].map(normalizeImportHeader);
+      const catIdx=headers.indexOf('KATEGORI');
+      const nameIdx=headers.indexOf('NAMA MENU');
+      const priceIdx=headers.indexOf('HARGA');
+      if(catIdx<0||nameIdx<0||priceIdx<0)throw new Error('Header wajib: KATEGORI, NAMA MENU, HARGA.');
+
+      const parsed=[]; let currentCategory=''; const parseErrors=[];
+      rows.slice(1).forEach((row,i)=>{
+        const rowNo=i+2;
+        const rawCategory=String(row[catIdx]??'').replace(/\u00a0/g,' ').trim();
+        const name=String(row[nameIdx]??'').replace(/\u00a0/g,' ').trim();
+        const rawPrice=row[priceIdx];
+        const priceText=String(rawPrice??'').trim();
+
+        if(!name && !priceText && !rawCategory)return;
+        if(rawCategory)currentCategory=rawCategory;
+        if(!currentCategory){parseErrors.push(`Baris ${rowNo}: kategori kosong.`);return;}
+        if(!name){parseErrors.push(`Baris ${rowNo}: nama menu kosong.`);return;}
+        if(!priceText){parseErrors.push(`Baris ${rowNo}: harga kosong.`);return;}
+        const price=parseImportPrice(rawPrice);
+        if(price<=0){parseErrors.push(`Baris ${rowNo}: harga tidak valid.`);return;}
+        parsed.push({categoryName:currentCategory,name,price,rowNo});
+      });
+      if(!parsed.length)throw new Error('Tidak ada baris menu yang bisa diimpor.');
+
+      const summary={};
+      parsed.forEach(item=>{const k=item.categoryName.trim();summary[k]=(summary[k]||0)+1;});
+      const summaryText=Object.entries(summary).map(([k,v])=>`${k}: ${v}`).join('\n');
+      const warningText=parseErrors.length?`\n\nBaris yang dilewati: ${parseErrors.length}`:'';
+      if(!confirm(`Siap import ${parsed.length} menu dari "${file.name}"?\n\n${summaryText}${warningText}\n\nMenu yang sama dalam kategori yang sama akan diperbarui, bukan digandakan.`))return;
+      setImportStatus(`Menyiapkan ${parsed.length} menu...`);
+
+      // Pemetaan kategori dibuat dengan normalisasi teks agar spasi tersembunyi
+      // atau perbedaan huruf besar/kecil tidak membuat kategori ganda.
+      const catMap=new Map();
+      categories.forEach(c=>catMap.set(normalizeImportText(c.name),c));
+
+      // Pastikan seluruh kategori yang belum ada dibuat terlebih dahulu.
+      const missingCats=[];
+      const missingCatKeys=new Set();
+      for(const item of parsed){
+        const key=normalizeImportText(item.categoryName);
+        if(!catMap.has(key) && !missingCatKeys.has(key)){
+          missingCatKeys.add(key);
+          missingCats.push({name:item.categoryName.trim(),outlet_id:null,color:'#10b981'});
+        }
+      }
+      if(missingCats.length){
+        const {error}=await sb.from('categories').insert(missingCats);
+        if(error)throw new Error('Gagal membuat kategori baru: '+error.message);
+        await loadCategories();
+        categories.forEach(c=>catMap.set(normalizeImportText(c.name),c));
+      }
+
+      // Ambil ulang master menu terbaru sehingga import tetap aman walau ada
+      // perubahan dari tab lain sebelum proses dimulai.
+      await loadMenuItems();
+      const menuMap=new Map(menuItems.map(m=>[
+        `${String(m.category_id||'')}::${normalizeImportText(m.name)}`,m
+      ]));
+
+      let created=0,updated=0;
+      const errors=[];
+      for(let i=0;i<parsed.length;i++){
+        const item=parsed[i];
+        try{
+          const cat=catMap.get(normalizeImportText(item.categoryName));
+          if(!cat)throw new Error(`Kategori "${item.categoryName}" tidak ditemukan setelah dibuat.`);
+          const menuKey=`${cat.id}::${normalizeImportText(item.name)}`;
+          const existing=menuMap.get(menuKey);
+          if(existing){
+            const {error}=await sb.from('menu_items').update({price:item.price,category_id:cat.id,name:item.name}).eq('id',existing.id);
+            if(error)throw new Error(`gagal memperbarui: ${error.message}`);
+            existing.price=item.price; existing.category_id=cat.id; existing.name=item.name;
+            updated++;
+          }else{
+            const id=crypto.randomUUID();
+            const {error}=await sb.from('menu_items').insert({id,outlet_id:null,category_id:cat.id,name:item.name,price:item.price,is_new:false,is_active:true});
+            if(error)throw new Error(`gagal menambah: ${error.message}`);
+            menuMap.set(menuKey,{id,category_id:cat.id,name:item.name,price:item.price,is_new:false,is_active:true});
+            created++;
+          }
+        }catch(rowErr){
+          errors.push(`Baris ${item.rowNo} — ${item.categoryName} / ${item.name}: ${rowErr.message||rowErr}`);
+        }
+        setImportStatus(`Memproses ${i+1}/${parsed.length} menu... Berhasil ${created+updated}, gagal ${errors.length}`);
+      }
+
+      await loadCategories(); await loadMenuItems(); renderCategories(); renderMenu(); loadCategoriesForMenu();
+      document.getElementById('menuImportFile').value='';
+
+      let status=`Import selesai: ${created} menu baru, ${updated} menu diperbarui.`;
+      if(errors.length){
+        status+=` ${errors.length} baris gagal. `+errors.slice(0,12).join(' | ')+(errors.length>12?` | +${errors.length-12} error lain.`:'');
+        setImportStatus(status,true);
+        notify(`Import selesai sebagian: ${created+updated} berhasil, ${errors.length} gagal.`,'err');
+      }else{
+        if(parseErrors.length)status+=` ${parseErrors.length} baris kosong/tidak valid dilewati.`;
+        setImportStatus(status);
+        notify('Import menu berhasil.');
+      }
+    }catch(err){
+      setImportStatus(err.message||'Import Excel gagal.',true);
+      notify(err.message||'Import Excel gagal.','err');
+    }
+  }
+
+  function selectedPaymentFilters(){
+    return [...document.querySelectorAll('.report-payment-filter:checked')].map(el=>el.value);
+  }
+  function paymentFilterMatch(channel, filters){
+    return filters.includes(channel);
+  }
+  function setAllPaymentFilters(checked){
+    document.querySelectorAll('.report-payment-filter').forEach(el=>el.checked=checked);
+    loadReports();
+  }
+  function resetReports(){
+    document.getElementById('reportOutlet').value='';
+    document.getElementById('reportStart').value='';
+    document.getElementById('reportEnd').value='';
+    setAllPaymentFilters(true);
+  }
+  async function loadReports(){
+    const outletId=document.getElementById('reportOutlet')?.value||'',start=document.getElementById('reportStart')?.value||'',end=document.getElementById('reportEnd')?.value||'';
+    const filters=selectedPaymentFilters();
+    let query=sb.from('transactions').select('id,outlet_id,cashier_name,total,channel,created_at,outlets(name,code)').order('created_at',{ascending:true});
+    if(outletId)query=query.eq('outlet_id',outletId);if(start)query=query.gte('created_at',start+'T00:00:00');if(end)query=query.lt('created_at',end+'T23:59:59.999');
+    const {data,error}=await query;if(error){notify(error.message,'err');return} reportRows=(data||[]).filter(r=>paymentFilterMatch(String(r.channel||''),filters));
+    const total=reportRows.reduce((s,r)=>s+Number(r.total||0),0),outletIds=new Set(reportRows.map(r=>r.outlet_id).filter(Boolean));
+    document.getElementById('reportCount').textContent=reportRows.length.toLocaleString('id-ID');document.getElementById('reportRevenue').textContent=money(total);document.getElementById('reportAverage').textContent=money(reportRows.length?total/reportRows.length:0);document.getElementById('reportOutletCount').textContent=outletIds.size.toLocaleString('id-ID');
+
+    buildPaymentSummary(reportRows);
+    const groups={};reportRows.forEach(r=>{const key=r.outlet_id||'unknown';if(!groups[key])groups[key]={name:r.outlets?.name||'Tanpa outlet',code:r.outlets?.code||'',count:0,total:0};groups[key].count++;groups[key].total+=Number(r.total||0)});
+    document.getElementById('reportOutletSummary').innerHTML=Object.values(groups).length?Object.values(groups).map(g=>`<div class="item"><div class="item-main"><div class="item-title">${esc(g.name)} ${g.code?`<span class="pill">${esc(g.code)}</span>`:''}</div><div class="item-sub">${g.count.toLocaleString('id-ID')} transaksi</div></div><div class="actions"><span class="pill">${money(g.total)}</span></div></div>`).join(''):'<div class="empty">Belum ada transaksi pada filter ini.</div>';
+    document.getElementById('reportTransactions').innerHTML=reportRows.length?`<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:13px"><thead><tr><th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Waktu</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Outlet</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Kasir</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Pembayaran</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Total</th><th style="text-align:left;padding:10px;border-bottom:1px solid var(--border)">Aksi</th></tr></thead><tbody>${reportRows.map(r=>`<tr><td style="padding:10px;border-bottom:1px solid var(--border)">${new Date(r.created_at).toLocaleString('id-ID')}</td><td style="padding:10px;border-bottom:1px solid var(--border)">${esc(r.outlets?.name||'-')}</td><td style="padding:10px;border-bottom:1px solid var(--border)">${esc(r.cashier_name||'-')}</td><td style="padding:10px;border-bottom:1px solid var(--border)">${esc(r.channel||'-')}</td><td style="padding:10px;border-bottom:1px solid var(--border)">${money(r.total)}</td><td style="padding:10px;border-bottom:1px solid var(--border)"><button class="danger" type="button" onclick="deleteTransaction('${r.id}')">Hapus</button></td></tr>`).join('')}</tbody></table></div>`:'';
+    buildCharts(reportRows);
+  }
+
+  async function deleteTransaction(id){
+    const row=reportRows.find(r=>String(r.id)===String(id));
+    if(!row){notify('Transaksi tidak ditemukan.','err');return}
+    const label=`${new Date(row.created_at).toLocaleString('id-ID')} · ${row.outlets?.name||'Tanpa outlet'} · ${money(row.total)}`;
+    if(!confirm(`Hapus transaksi ini?\n\n${label}\n\nItem transaksi juga akan dihapus. Tindakan ini tidak bisa dibatalkan.`)) return;
+    const {data,error}=await sb.rpc('admin_delete_transaction',{p_transaction_id:id});
+    if(error){notify('Gagal menghapus transaksi: '+error.message,'err');return}
+    if(data===false){notify('Transaksi tidak ditemukan atau sudah terhapus.','err');return}
+    notify('Transaksi berhasil dihapus.');
+    await loadReports();
+  }
+
+  function buildPaymentSummary(rows){
+    const channels=[
+      ['Cash','Cash'],
+      ['QRIS','QRIS'],
+      ['Grab','Grab'],
+      ['Shopee','Shopee'],
+      ['Gofood','Gofood']
+    ];
+    const totals={};
+    channels.forEach(([key])=>totals[key]=0);
+    rows.forEach(r=>{
+      const key=String(r.channel||'');
+      if(Object.prototype.hasOwnProperty.call(totals,key)) totals[key]+=Number(r.total||0);
+    });
+    const el=document.getElementById('reportPaymentSummary');
+    if(!el)return;
+    el.innerHTML=channels.map(([key,label])=>`
+      <div class="card stat" style="margin-top:0">
+        <div class="label">${label}</div>
+        <div class="value" style="font-size:20px">${money(totals[key])}</div>
+      </div>`).join('');
+  }
+
+  function dateLabel(iso){const d=new Date(iso);return d.toLocaleDateString('id-ID',{day:'2-digit',month:'2-digit'})}
+  function dayKey(iso){const d=new Date(iso);return d.toISOString().slice(0,10)}
+  function buildCharts(rows){
+    if(typeof Chart==='undefined')return;
+    const keys=[...new Set(rows.map(r=>dayKey(r.created_at)))].sort();
+    const labels=keys.map(k=>new Date(k+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short'}));
+    const totals=keys.map(k=>rows.filter(r=>dayKey(r.created_at)===k).reduce((s,r)=>s+Number(r.total||0),0));
+    if(totalBarChart)totalBarChart.destroy();if(outletLineChart)outletLineChart.destroy();
+    totalBarChart=new Chart(document.getElementById('totalBarChart'),{type:'bar',data:{labels,datasets:[{label:'Total Omzet',data:totals,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'Rp '+Number(v).toLocaleString('id-ID')}}}}});
+    const outletKeys=[...new Set(rows.map(r=>r.outlet_id).filter(Boolean))];
+    const datasets=outletKeys.map((id,i)=>{const name=rows.find(r=>r.outlet_id===id)?.outlets?.name||('Outlet '+(i+1));return {label:name,data:keys.map(k=>rows.filter(r=>r.outlet_id===id&&dayKey(r.created_at)===k).reduce((s,r)=>s+Number(r.total||0),0)),tension:.25,borderWidth:2,fill:false}});
+    outletLineChart=new Chart(document.getElementById('outletLineChart'),{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,ticks:{callback:v=>'Rp '+Number(v).toLocaleString('id-ID')}}}}});
+  }
+
+  function exportReportXlsx(){
+    if(typeof XLSX==='undefined'){notify('Modul Excel belum termuat. Coba refresh.','err');return}
+    if(!reportRows.length){notify('Tidak ada data laporan untuk diexport.','err');return}
+    const summary=[['Laporan Admin Panel'],['Filter Outlet',document.getElementById('reportOutlet').selectedOptions[0]?.text||'Semua outlet'],['Tanggal Mulai',document.getElementById('reportStart').value||'-'],['Tanggal Akhir',document.getElementById('reportEnd').value||'-'],['Jumlah Transaksi',reportRows.length],['Total Omzet',reportRows.reduce((s,r)=>s+Number(r.total||0),0)]];
+    const byOutlet={};reportRows.forEach(r=>{const k=r.outlet_id||'unknown';if(!byOutlet[k])byOutlet[k]={outlet:r.outlets?.name||'Tanpa outlet',kode:r.outlets?.code||'',transaksi:0,omzet:0};byOutlet[k].transaksi++;byOutlet[k].omzet+=Number(r.total||0)});
+    const outletData=[['Outlet','Kode','Jumlah Transaksi','Total Omzet'],...Object.values(byOutlet).map(g=>[g.outlet,g.kode,g.transaksi,g.omzet])];
+    const paymentMap={Cash:0,QRIS:0,Grab:0,Shopee:0,Gofood:0};
+    reportRows.forEach(r=>{const key=String(r.channel||'');if(Object.prototype.hasOwnProperty.call(paymentMap,key))paymentMap[key]+=Number(r.total||0)});
+    const paymentData=[['Pembayaran','Total Uang Masuk'],...Object.entries(paymentMap).map(([k,v])=>[k,v])];
+    const trxData=[['Waktu','Outlet','Kode Outlet','Kasir','Pembayaran','Total'],...reportRows.map(r=>[new Date(r.created_at).toLocaleString('id-ID'),r.outlets?.name||'-',r.outlets?.code||'-',r.cashier_name||'-',r.channel||'-',Number(r.total||0)])];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(summary),'Ringkasan');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(paymentData),'Per Pembayaran');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(outletData),'Per Outlet');XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(trxData),'Transaksi');
+    const stamp=new Date().toISOString().slice(0,10);XLSX.writeFile(wb,`laporan-admin-${stamp}.xlsx`);notify('File Excel berhasil dibuat.');
+  }
+
+  function normalizeGroupLink(raw){
+    const v=String(raw||'').trim();
+    if(!v)return '';
+    try{
+      const u=new URL(v);
+      if(u.protocol!=='https:' || u.hostname!=='chat.whatsapp.com') return '';
+      return u.toString();
+    }catch{return ''}
+  }
+  function updateWhatsappPreview(){
+    const v=document.getElementById('globalWhatsappGroup')?.value.trim()||'';
+    document.getElementById('whatsappPreview').textContent=v||'-';
+  }
+  async function loadGlobalSettings(){
+    const {data,error}=await sb.from('app_settings').select('id,whatsapp_group_link,qris_url').eq('id','global').maybeSingle();
+    if(error){document.getElementById('settingsStatus').textContent='Tabel app_settings belum siap atau kolom grup WhatsApp belum ada. Jalankan SQL setup global settings terbaru.';return}
+    if(data){
+      globalSettings.whatsapp_group_link=data.whatsapp_group_link||'';
+      globalSettings.qris_url=data.qris_url||'';
+      document.getElementById('globalWhatsappGroup').value=globalSettings.whatsapp_group_link;
+      document.getElementById('qrisPreview').src=globalSettings.qris_url||'';
+    }
+    updateWhatsappPreview();
+  }
+  async function saveGlobalSettings(){
+    const input=document.getElementById('globalWhatsappGroup').value.trim();
+    const groupLink=normalizeGroupLink(input);
+    if(input && !groupLink){notify('Link grup WhatsApp tidak valid. Gunakan link https://chat.whatsapp.com/...','err');return}
+    const file=document.getElementById('qrisFile').files?.[0];
+    let qrisUrl=globalSettings.qris_url||'';
+    if(file){
+      try{
+        const blob=await compressImage(file);
+        const {error:upError}=await sb.storage.from('app-assets').upload('qris-global.png',blob,{contentType:'image/png',upsert:true,cacheControl:'3600'});
+        if(upError)throw new Error('Upload QRIS gagal: '+upError.message);
+        const {data:pub}=sb.storage.from('app-assets').getPublicUrl('qris-global.png');
+        qrisUrl=pub.publicUrl+'?v='+Date.now();
+      }catch(err){notify(err.message||'Gagal menyimpan QRIS.','err');return}
+    }
+    const {error}=await sb.from('app_settings').upsert({id:'global',whatsapp_group_link:groupLink,qris_url:qrisUrl});
+    if(error){notify('Gagal menyimpan pengaturan global: '+error.message,'err');return}
+    globalSettings.whatsapp_group_link=groupLink;
+    globalSettings.qris_url=qrisUrl;
+    document.getElementById('qrisPreview').src=qrisUrl||'';
+    document.getElementById('qrisFile').value='';
+    updateWhatsappPreview();
+    document.getElementById('settingsStatus').textContent='Pengaturan global berhasil disimpan.';
+    notify('Pengaturan global berhasil disimpan.');
+  }
+  function compressImage(file){return new Promise((resolve,reject)=>{if(!file.type.startsWith('image/')){reject(new Error('File QRIS harus berupa gambar.'));return}const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=1200,scale=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*scale));c.height=Math.max(1,Math.round(img.height*scale));const ctx=c.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);c.toBlob(b=>b?resolve(b):reject(new Error('Gagal memproses gambar.')),'image/png');};img.onerror=()=>reject(new Error('Gambar QRIS tidak dapat dibaca.'));img.src=reader.result};reader.onerror=()=>reject(new Error('Gagal membaca file gambar.'));reader.readAsDataURL(file)})}
+  document.getElementById('globalWhatsappGroup')?.addEventListener('input',updateWhatsappPreview);
+  setImagePreview('', 'menuImagePreview');
+  setImagePreview('', 'editMenuImagePreview');
+
+  // Close modals on backdrop click / Escape
+  document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')}));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show'))}});
+
+  sb.auth.getSession().then(({data})=>{if(data.session)enterApp()});
+  sb.auth.onAuthStateChange((_event,session)=>{if(session)enterApp()});
+</script>
+</body>
+</html>
