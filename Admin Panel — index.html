@@ -385,16 +385,27 @@
     if(!session?.access_token){
       throw new Error('Sesi login Admin tidak tersedia. Silakan login ulang.');
     }
-    const {data,error}=await sb.functions.invoke('manage-cashiers',{
-      body,
-      headers:{Authorization:`Bearer ${session.access_token}`}
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cashiers`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
     });
-    if(error){
-      let detail=error.message||'Gagal menghubungi layanan Manajemen Kasir.';
-      try{ if(error.context){ const txt=await error.context.text(); if(txt) detail=txt; } }catch{}
-      throw new Error(detail);
+
+    const raw = await response.text();
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch {
+      throw new Error(`Layanan Manajemen Kasir mengembalikan respons yang tidak valid (HTTP ${response.status}).`);
     }
-    if(data?.error)throw new Error(data.error);
+
+    if(!response.ok || data?.error){
+      throw new Error(data?.error || `Gagal menghubungi layanan Manajemen Kasir (HTTP ${response.status}).`);
+    }
+
     return data;
   }
 
