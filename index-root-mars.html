@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MARS-1930 POS</title>
+  <style>
+    *{box-sizing:border-box}
+    body{
+      margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+      font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:linear-gradient(135deg,#16080b 0%,#300e14 55%,#52131c 100%);color:#fff
+    }
+    .wrap{width:min(760px,100%);padding:34px;border:1px solid rgba(255,255,255,.12);border-radius:28px;
+      background:rgba(255,255,255,.06);backdrop-filter:blur(14px);box-shadow:0 24px 80px rgba(0,0,0,.35)}
+    .badge{display:inline-block;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:800;
+      letter-spacing:.08em;background:rgba(255,255,255,.1);color:#f7dfe2}
+    h1{margin:16px 0 8px;font-size:42px;line-height:1.05}
+    p{margin:0;color:#dec9cc;line-height:1.6}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:28px}
+    a{text-decoration:none;color:#fff;padding:20px;border-radius:20px;border:1px solid rgba(255,255,255,.1);
+      background:rgba(0,0,0,.16);transition:transform .18s ease,background .18s ease}
+    a:hover{transform:translateY(-2px);background:rgba(255,255,255,.08)}
+    .title{font-size:18px;font-weight:900;margin-bottom:6px}.desc{font-size:13px;color:#d8c7c9}
+    .footer{margin-top:20px;font-size:12px;color:#bba9ac}
+    @media(max-width:620px){.grid{grid-template-columns:1fr}h1{font-size:34px}.wrap{padding:24px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <span class="badge">MARS-1930 POS</span>
+    <h1>Pilih Aplikasi</h1>
+    <p>Gunakan menu di bawah untuk membuka Admin Panel atau aplikasi Kasir.</p>
+    <div class="grid">
+      <a href="./Admin%20Panel%20%E2%80%94%20index.html">
+        <div class="title">Admin Panel</div>
+        <div class="desc">Kelola outlet, kategori, menu, laporan, QRIS, dan pengaturan global.</div>
+      </a>
+      <a href="./Kasir%20-%20Index.html">
+        <div class="title">Kasir</div>
+        <div class="desc">Buka shift, catat transaksi, pengeluaran, pembayaran, dan laporan shift.</div>
+      </a>
+    </div>
+    <div class="footer">MARS-1930 POS • Production</div>
+  </main>
+</body>
+</html>
