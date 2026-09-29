@@ -74,6 +74,7 @@
 
       <div class="tabs">
         <button id="tabBtnOutlets" class="tab active" type="button" onclick="showTab('outlets')">Outlet</button>
+        <button id="tabBtnCashiers" class="tab" type="button" onclick="showTab('cashiers')">Manajemen Kasir</button>
         <button id="tabBtnCategories" class="tab" type="button" onclick="showTab('categories')">Kategori</button>
         <button id="tabBtnMenu" class="tab" type="button" onclick="showTab('menu')">Menu</button>
         <button id="tabBtnReports" class="tab" type="button" onclick="showTab('reports')">Laporan</button>
@@ -91,6 +92,30 @@
           <button class="primary" style="margin-top:12px" type="button" onclick="addOutlet()">+ Tambah Outlet</button>
         </div>
         <div id="outletsList" class="list"></div>
+      </section>
+
+      <section id="tab-cashiers" class="card hidden">
+        <div class="section-title">
+          <div><h2>Manajemen Kasir</h2><p class="muted">Buat, pindahkan, reset password, atau hapus akun kasir tanpa masuk Dashboard Supabase.</p></div>
+          <button class="secondary" type="button" onclick="loadCashiers()">Refresh</button>
+        </div>
+
+        <div class="card" style="box-shadow:none;margin-top:14px;background:var(--surface2)">
+          <h3 style="font-size:15px;margin-bottom:12px">+ Tambah Kasir</h3>
+          <div class="grid grid3">
+            <div><label>Nama Kasir</label><input id="cashierName" placeholder="Contoh: Kasir Outlet 3"></div>
+            <div><label>Email Login</label><input id="cashierEmail" type="email" autocomplete="off" placeholder="kasir3@contoh.com"></div>
+            <div><label>Outlet</label><select id="cashierOutlet"></select></div>
+          </div>
+          <div class="grid grid2" style="margin-top:12px">
+            <div><label>Password Awal</label><input id="cashierPassword" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></div>
+            <div><label>Konfirmasi Password</label><input id="cashierPassword2" type="password" autocomplete="new-password" placeholder="Ulangi password"></div>
+          </div>
+          <button id="createCashierBtn" class="primary" style="margin-top:12px" type="button" onclick="createCashier()">+ Buat Akun Kasir</button>
+          <p class="hint" style="margin-top:9px">Email langsung dikonfirmasi oleh sistem agar kasir bisa login menggunakan email + password yang kamu buat.</p>
+        </div>
+
+        <div id="cashiersList" class="list"></div>
       </section>
 
       <section id="tab-categories" class="card hidden">
@@ -249,9 +274,30 @@
             </div>
           </div>
         </div>
+        <div class="card" style="margin-top:14px;box-shadow:none;background:var(--surface2)">
+          <div class="section-title">
+            <div><h3 style="font-size:15px">Keamanan Akun Admin</h3><p class="muted">Ganti password akun Admin yang sedang login.</p></div>
+          </div>
+          <div class="grid grid2" style="margin-top:12px">
+            <div><label>Password Baru</label><input id="adminNewPassword" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter"></div>
+            <div><label>Konfirmasi Password Baru</label><input id="adminNewPassword2" type="password" autocomplete="new-password" placeholder="Ulangi password baru"></div>
+          </div>
+          <button id="changeAdminPasswordBtn" class="secondary" style="margin-top:12px" type="button" onclick="changeAdminPassword()">Ganti Password Admin</button>
+        </div>
+
         <button class="primary" style="margin-top:14px" type="button" onclick="saveGlobalSettings()">Simpan Pengaturan Global</button>
         <p id="settingsStatus" class="hint" style="margin-top:10px"></p>
       </section>
+    </div>
+  </div>
+
+  <!-- CASHIER OUTLET MODAL -->
+  <div id="cashierOutletModal" class="modal">
+    <div class="modal-card">
+      <div class="section-title"><div><h2>Pindah Outlet Kasir</h2><p class="muted">Pilih outlet baru untuk akun kasir.</p></div><button class="secondary" type="button" onclick="closeCashierOutletEdit()">✕</button></div>
+      <input id="editCashierOutletUserId" type="hidden">
+      <div style="margin-top:16px"><label>Outlet Baru</label><select id="editCashierOutletSelect"></select></div>
+      <div class="modal-actions"><button class="secondary" type="button" onclick="closeCashierOutletEdit()">Batal</button><button class="primary" type="button" onclick="saveCashierOutletEdit()">Simpan Perubahan</button></div>
     </div>
   </div>
 
@@ -302,7 +348,7 @@
   const SUPABASE_URL = 'https://xxdskhnnfscxykxjrsog.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_7J3iIcJCGw8fhhuRI7RAVA_CaeODf5j';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  let outlets = [], categories = [], menuItems = [], reportRows = [];
+  let outlets = [], categories = [], menuItems = [], reportRows = [], cashiers = [];
   let totalBarChart = null, outletLineChart = null;
   const globalSettings = { whatsapp_group_link:'', qris_url:'' };
 
@@ -334,11 +380,152 @@
   function showAuth(){document.getElementById('appView').classList.add('hidden');document.getElementById('authView').classList.remove('hidden')}
   async function signOut(){await sb.auth.signOut();showAuth()}
 
+  async function callCashierFunction(body){
+    const {data,error}=await sb.functions.invoke('manage-cashiers',{body});
+    if(error){
+      let detail=error.message||'Gagal menghubungi layanan Manajemen Kasir.';
+      try{ if(error.context){ const txt=await error.context.text(); if(txt) detail=txt; } }catch{}
+      throw new Error(detail);
+    }
+    if(data?.error)throw new Error(data.error);
+    return data;
+  }
+
+  function populateCashierOutlet(){
+    const el=document.getElementById('cashierOutlet');
+    if(!el)return;
+    el.innerHTML='<option value="">Pilih outlet...</option>'+outlets.map(o=>`<option value="${o.id}">${esc(o.name)} (${esc(o.code)})</option>`).join('');
+  }
+
+  async function loadCashiers(){
+    const el=document.getElementById('cashiersList');
+    if(el)el.innerHTML='<div class="empty">Memuat akun kasir...</div>';
+    try{
+      const data=await callCashierFunction({action:'list'});
+      cashiers=Array.isArray(data?.cashiers)?data.cashiers:[];
+      renderCashiers();
+    }catch(err){
+      cashiers=[];
+      if(el)el.innerHTML=`<div class="empty">${esc(err.message||'Gagal memuat kasir.')}</div>`;
+      notify(err.message||'Gagal memuat kasir.','err');
+    }
+  }
+
+  function renderCashiers(){
+    const el=document.getElementById('cashiersList');
+    if(!el)return;
+    if(!cashiers.length){el.innerHTML='<div class="empty">Belum ada akun kasir.</div>';return}
+    el.innerHTML=cashiers.map(c=>{
+      const outletName=c.outlet?.name||'Belum ada outlet';
+      const outletCode=c.outlet?.code||'';
+      const active=c.active!==false;
+      return `<div class="item">
+        <div class="item-main">
+          <div class="item-title">${esc(c.full_name||'Kasir')} <span class="pill">KASIR</span></div>
+          <div class="item-sub">${esc(c.email||'-')} · ${esc(outletName)}${outletCode?` (${esc(outletCode)})`:''}</div>
+        </div>
+        <div class="actions">
+          <span class="pill" style="${active?'':'background:#f1f5f9;color:#64748b'}">${active?'Aktif':'Diblokir'}</span>
+          <button class="secondary" type="button" onclick="openCashierOutletEdit('${c.id}')">Pindah Outlet</button>
+          <button class="secondary" type="button" onclick="openCashierPasswordEdit('${c.id}')">Reset Password</button>
+          <button class="danger" type="button" onclick="deleteCashier('${c.id}')">Hapus Akun</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function createCashier(){
+    const name=document.getElementById('cashierName').value.trim();
+    const email=document.getElementById('cashierEmail').value.trim();
+    const outletId=document.getElementById('cashierOutlet').value;
+    const password=document.getElementById('cashierPassword').value;
+    const password2=document.getElementById('cashierPassword2').value;
+    if(!name||!email||!outletId||!password){notify('Nama, email, outlet, dan password wajib diisi.','err');return}
+    if(password.length<8){notify('Password minimal 8 karakter.','err');return}
+    if(password!==password2){notify('Konfirmasi password tidak sama.','err');return}
+    const btn=document.getElementById('createCashierBtn');if(btn)btn.disabled=true;
+    try{
+      await callCashierFunction({action:'create',full_name:name,email,password,outlet_id:outletId});
+      ['cashierName','cashierEmail','cashierPassword','cashierPassword2'].forEach(id=>document.getElementById(id).value='');
+      document.getElementById('cashierOutlet').value='';
+      notify('Akun kasir berhasil dibuat.');
+      await loadCashiers();
+    }catch(err){notify(err.message||'Gagal membuat akun kasir.','err');}
+    finally{if(btn)btn.disabled=false}
+  }
+
+  function openCashierOutletEdit(id){
+    const c=cashiers.find(x=>String(x.id)===String(id));
+    if(!c)return;
+    document.getElementById('editCashierOutletUserId').value=c.id;
+    const el=document.getElementById('editCashierOutletSelect');
+    el.innerHTML='<option value="">Pilih outlet...</option>'+outlets.map(o=>`<option value="${o.id}">${esc(o.name)} (${esc(o.code)})</option>`).join('');
+    el.value=c.outlet_id||'';
+    document.getElementById('cashierOutletModal').classList.add('show');
+  }
+  function closeCashierOutletEdit(){document.getElementById('cashierOutletModal').classList.remove('show')}
+  async function saveCashierOutletEdit(){
+    const id=document.getElementById('editCashierOutletUserId').value;
+    const outletId=document.getElementById('editCashierOutletSelect').value;
+    if(!id||!outletId){notify('Pilih outlet baru.','err');return}
+    try{
+      await callCashierFunction({action:'update_outlet',user_id:id,outlet_id:outletId});
+      closeCashierOutletEdit();
+      notify('Outlet kasir berhasil diperbarui.');
+      await loadCashiers();
+    }catch(err){notify(err.message||'Gagal memindahkan outlet kasir.','err');}
+  }
+
+  async function openCashierPasswordEdit(id){
+    const c=cashiers.find(x=>String(x.id)===String(id));
+    if(!c)return;
+    const p1=prompt(`Password baru untuk ${c.full_name||c.email}:`);
+    if(p1===null)return;
+    const p2=prompt('Ulangi password baru:');
+    if(p2===null)return;
+    if(p1.length<8){notify('Password minimal 8 karakter.','err');return}
+    if(p1!==p2){notify('Konfirmasi password tidak sama.','err');return}
+    try{
+      await callCashierFunction({action:'update_password',user_id:id,password:p1});
+      notify('Password kasir berhasil direset.');
+    }catch(err){notify(err.message||'Gagal reset password kasir.','err');}
+  }
+
+  async function deleteCashier(id){
+    const c=cashiers.find(x=>String(x.id)===String(id));
+    if(!c)return;
+    const label=`${c.full_name||'Kasir'} · ${c.email||'-'} · ${c.outlet?.name||'Tanpa outlet'}`;
+    if(!confirm(`Hapus akun kasir ini?\n\n${label}\n\nAkun login akan dihapus dan kasir tidak dapat masuk lagi. Data transaksi lama tetap tersimpan di laporan.`))return;
+    try{
+      await callCashierFunction({action:'delete',user_id:id});
+      notify('Akun kasir berhasil dihapus.');
+      await loadCashiers();
+    }catch(err){notify(err.message||'Gagal menghapus akun kasir.','err');}
+  }
+
+  async function changeAdminPassword(){
+    const p1=document.getElementById('adminNewPassword').value;
+    const p2=document.getElementById('adminNewPassword2').value;
+    if(!p1){notify('Masukkan password baru.','err');return}
+    if(p1.length<8){notify('Password minimal 8 karakter.','err');return}
+    if(p1!==p2){notify('Konfirmasi password tidak sama.','err');return}
+    const btn=document.getElementById('changeAdminPasswordBtn');if(btn)btn.disabled=true;
+    try{
+      const {error}=await sb.auth.updateUser({password:p1});
+      if(error)throw new Error(error.message);
+      document.getElementById('adminNewPassword').value='';
+      document.getElementById('adminNewPassword2').value='';
+      notify('Password Admin berhasil diganti.');
+    }catch(err){notify(err.message||'Gagal mengganti password Admin.','err');}
+    finally{if(btn)btn.disabled=false}
+  }
+
   function showTab(tab){
-    ['outlets','categories','menu','reports','settings'].forEach(x=>{
+    ['outlets','cashiers','categories','menu','reports','settings'].forEach(x=>{
       const p=document.getElementById('tab-'+x); const b=document.getElementById('tabBtn'+x.charAt(0).toUpperCase()+x.slice(1));
       if(p)p.classList.toggle('hidden',x!==tab); if(b)b.classList.toggle('active',x===tab);
     });
+    if(tab==='cashiers'){populateCashierOutlet();loadCashiers();}
     if(tab==='categories')renderCategories();
     if(tab==='menu'){renderMenu();loadCategoriesForMenu();}
     if(tab==='reports'){populateReportOutlet();loadReports();}
