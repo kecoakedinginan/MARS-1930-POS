@@ -381,7 +381,14 @@
   async function signOut(){await sb.auth.signOut();showAuth()}
 
   async function callCashierFunction(body){
-    const {data,error}=await sb.functions.invoke('manage-cashiers',{body});
+    const {data:{session}} = await sb.auth.getSession();
+    if(!session?.access_token){
+      throw new Error('Sesi login Admin tidak tersedia. Silakan login ulang.');
+    }
+    const {data,error}=await sb.functions.invoke('manage-cashiers',{
+      body,
+      headers:{Authorization:`Bearer ${session.access_token}`}
+    });
     if(error){
       let detail=error.message||'Gagal menghubungi layanan Manajemen Kasir.';
       try{ if(error.context){ const txt=await error.context.text(); if(txt) detail=txt; } }catch{}
