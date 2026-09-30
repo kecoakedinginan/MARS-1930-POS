@@ -349,6 +349,7 @@
   const SUPABASE_KEY = 'sb_publishable_7J3iIcJCGw8fhhuRI7RAVA_CaeODf5j';
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   let outlets = [], categories = [], menuItems = [], reportRows = [], cashiers = [];
+  let currentSession = null;
   let totalBarChart = null, outletLineChart = null;
   const globalSettings = { whatsapp_group_link:'', qris_url:'' };
 
@@ -364,8 +365,9 @@
     const email=document.getElementById('loginEmail').value.trim(); const password=document.getElementById('loginPassword').value;
     if(!email||!password){setLoginMsg('Isi email dan password.',true);return}
     setLoginMsg('Memproses login...');
-    const {error}=await sb.auth.signInWithPassword({email,password});
+    const {data,error}=await sb.auth.signInWithPassword({email,password});
     if(error){setLoginMsg(error.message,true);return}
+    currentSession = data?.session || null;
     await enterApp();
   }
   async function enterApp(){
@@ -378,12 +380,18 @@
     await loadAll();
   }
   function showAuth(){document.getElementById('appView').classList.add('hidden');document.getElementById('authView').classList.remove('hidden')}
-  async function signOut(){await sb.auth.signOut();showAuth()}
+  async function signOut(){currentSession=null;await sb.auth.signOut();showAuth()}
 
   async function callCashierFunction(body){
-    const {data:{session}} = await sb.auth.getSession();
+    let session = currentSession;
     if(!session?.access_token){
-      throw new Error('Sesi login Admin tidak tersedia. Silakan login ulang.');
+      const {data,error} = await sb.auth.getSession();
+      if(error) throw new Error('Gagal membaca sesi login Admin: '+error.message);
+      session = data?.session || null;
+      currentSession = session;
+    }
+    if(!session?.access_token){
+      throw new Error('Sesi login Admin tidak tersedia. Silakan keluar lalu login kembali.');
     }
 
     const response = await fetch(`${SUPABASE_URL}/functions/v1/manage-cashiers`, {
@@ -1134,8 +1142,8 @@
   document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')}));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show'))}});
 
-  sb.auth.getSession().then(({data})=>{if(data.session)enterApp()});
-  sb.auth.onAuthStateChange((_event,session)=>{if(session)enterApp()});
+  sb.auth.getSession().then(({data})=>{currentSession=data?.session||null;if(data.session)enterApp()});
+  sb.auth.onAuthStateChange((_event,session)=>{currentSession=session||null;if(session)enterApp()});
 </script>
 </body>
 </html>
